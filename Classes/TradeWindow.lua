@@ -101,7 +101,7 @@ function TradeWindow:open(playerName, callback, allwaysExecuteCallback)
         end, 1);
 
         GL.Events:register("TradeWindowTradeShowCallbackListener", "TRADE_SHOW", function ()
-            -- Remove our trade window show eventlistener, we no longer need it
+            -- Remove our trade window show event listener, we no longer need it
             GL.Events:unregister("TradeWindowTradeShowCallbackListener");
 
             -- We can cancel our timer now
@@ -144,6 +144,7 @@ function TradeWindow:handleEvents(event, message)
     -- Trade started
     if (event == "TRADE_SHOW") then
         self.ItemsToAdd = {};
+        GL.Ace:CancelTimer(self.SetCopperTimer);
 
         -- Trade window shown, show/update the announcement checkbox
         self:updateAnnouncementCheckBox();
@@ -166,6 +167,7 @@ function TradeWindow:handleEvents(event, message)
     -- Trade closed
     if (event == "TRADE_CLOSED") then
         self.ItemsToAdd = {};
+        GL.Ace:CancelTimer(self.SetCopperTimer);
 
         -- Make sure to cancel any lingering timers
         GL:debug("Cancel TradeWindow.AddItemsTimer");
@@ -191,7 +193,7 @@ function TradeWindow:handleEvents(event, message)
         end
 
         -- Fire a custom GL event. This ensures that the listeners have access to the data set in self.State
-        GL.Events:fire("GL." .. event);
+        GL.Events:fire("GL." .. event, self.State);
 
         return;
     end
@@ -315,6 +317,32 @@ function TradeWindow:addItem(itemID)
     GL:debug("TradeWindow:addItem");
 
     tinsert(self.ItemsToAdd, itemID);
+end
+
+--- Attempt to set a copper amount in the trade window
+--- Since we use a timer here we require a target so that we can double-check
+--- whether we're still trading the right person right before adding the copper
+---
+---@param amount number
+---@param target string
+---@return void
+function TradeWindow:setCopper(amount, target, callback)
+    GL:debug("TradeWindow:setCopper");
+
+    GL.Ace:CancelTimer(self.SetCopperTimer);
+    self.SetCopperTimer = GL.Ace:ScheduleTimer(function ()
+        -- Looks like the target changed somewhere along the way
+        if (not GL:iEquals(GL:tableGet(self.State or {}, "partner"), target)) then
+            return;
+        end
+
+        _G.MoneyInputFrame_SetCopper(_G.TradePlayerInputMoneyFrame, amount);
+
+        -- Let the application know whether setting the desired amount of copper succeeded
+        if (type(callback) == "function") then
+            callback(_G.MoneyInputFrame_GetCopper(_G.TradePlayerInputMoneyFrame) == amount);
+        end
+    end, .5);
 end
 
 --- Process the ItemsToAdd table

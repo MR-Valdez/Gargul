@@ -96,6 +96,7 @@ function PackMule:_init()
         end
 
         ConfirmLootRoll(rollID, roll);
+        StaticPopup_Hide("CONFIRM_LOOT_ROLL");
     end);
 
     -- Make sure to auto accept BoP loot when opening containers
@@ -874,6 +875,11 @@ function PackMule:roundRobinTargetForRule(Rule)
     local ruleId = Rule.quality;
     if (not GL.empty(Rule.item)) then
         ruleId = Rule.item;
+    end
+
+    -- This is apparently possible?
+    if (not ruleId) then
+        return;
     end
 
     -- first time we've seen this item

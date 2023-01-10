@@ -1,5 +1,9 @@
 local _, GL = ...;
 
+
+---@type Settings
+local Settings = GL.Settings;
+
 ---@class Commands
 GL.Commands = GL.Commands or {
     CommandDescriptions = {
@@ -14,13 +18,16 @@ GL.Commands = GL.Commands or {
         dft = "Open the DFT importer. Data exported from your DFT sheet can be imported here",
         cpr = "Open the classicpr importer. Data exported from https://classicpr.io/ can be imported here",
         export = "Export dropped loot to a CSV format which is compatible with TMB for example.",
+        gdkp = "Open the GDKP UI where you can manage your GDKP sessions",
         groups = "Open the group window where you can provide a roster from csv/raidhelper/wowhead so that you can: see who's missing and sort groups automatically",
         import = "Opens the general import window that includes shortcuts to the TMB, SoftRes or loot priority importers",
+        importprices = "Open an import window with which you can import per-product minimum and increment settings",
         inspect = "You can check whether players brought items (and how many), e.g. to check for consumables (requires players to have Gargul!): /gl inspect itemID1, itemID2, itemID3",
         lootpriority = "Open the loot priority editor where you can edit / clear loot priorities. These are the same priorities as imported by the TMB importer, clearing them here clears them for TMB as well",
         packmule = "Open PackMule which allows you to automatically funnel dropped gear to specific players, very helpful with green items for example",
         plusones = "Open the PlusOnes window that allows you to check and manipulate all plus one values",
         raidcsv = "Output everyone currently in the group in a CSV format",
+        resetui = "Reset Gargul's UI sizes and positions. Useful in case something went out of bounds!",
         rolloff = "Open the RollOff UI where you can announce an item for players to roll on: /gl award [itemLink?]",
         settings = "Open the settings menu",
         softreserves = "Open either the SoftRes import window if there's no data available or open the SoftRes overview",
@@ -29,49 +36,51 @@ GL.Commands = GL.Commands or {
     },
 
     ShorthandDictionary = {
+        ["+1"] = "plusones",
+        a = "award",
         ah = "awardhistory",
-        br = "boostedrolls",
+        aod = "awardondate",
+        bi = "bid",
         boosted = "boostedrolls",
         boostedroll = "boostedrolls",
-        points = "boostedrolls",
+        br = "boostedrolls",
+        bu = "buffs",
+        cd = "cleardisenchanter",
         co = "settings",
         config = "settings",
-        ro = "rolloff",
-        roll = "rolloff",
-        a = "award",
-        aod = "awardondate",
-        cd = "cleardisenchanter",
-        sd = "setdisenchanter",
-        rcsv = "raidcsv",
+        clearplusone = "clearplusones",
+        cpo = "clearplusones",
+        ex = "export",
+        gd = "gdkp",
         gr = "groups",
-        roster = "groups",
-        so = "softreserves",
-        sr = "softreserves",
-        pm = "packmule",
-        tmb = "thatsmybis",
-        wl = "thatsmybis",
+        im = "import",
+        ip = "importprices",
+        ins = "inspect",
         lo = "lootpriority",
+        plusone = "plusones",
+        pm = "packmule",
+        po = "plusones",
+        points = "boostedrolls",
         pr = "lootpriority",
         priority = "lootpriority",
-        bi = "bid",
-        im = "import",
-        ex = "export",
+        rcsv = "raidcsv",
+        ro = "rolloff",
+        roll = "rolloff",
+        roster = "groups",
+        sd = "setdisenchanter",
+        so = "softreserves",
+        sr = "softreserves",
+        tmb = "thatsmybis",
         ve = "version",
-        ins = "inspect",
-        bu = "buffs",
-        ["+1"] = "plusones",
-        plusone = "plusones",
-        po = "plusones",
-        cpo = "clearplusones",
-        clearplusone = "clearplusones",
+        wl = "thatsmybis",
     },
 
     Dictionary = {
-        -- Open the settings menu
-        settings = function(...) GL.Settings:draw(); end,
-
         -- Open the window for rolling off items
         rolloff = function(...) GL.MasterLooterUI:draw(...); end,
+
+        -- Open the settings menu
+        settings = function(...) Settings:draw(); end,
 
         -- Award an item. This either award it directly or opens the UI
         award = function(...)
@@ -104,13 +113,16 @@ GL.Commands = GL.Commands or {
         -- Open the boosted rolls window
         boostedrolls = function() GL.BoostedRolls:draw(); end,
 
-        -- Export the current raid roster to csv
-        raidcsv = function ()
-            GL.RaidGroups:toCSV();
-        end,
+        -- Open the GDKP overview
+        gdkp = function () GL.Interface.GDKP.Overview:open(); end,
 
         -- Open the raid groups window
         groups = function() GL.RaidGroups:drawImporter(); end,
+
+        -- Open the GDKP minimum price / increment importer
+        importprices = function()
+            GL.Interface.GDKP.ImportPrices:open();
+        end,
 
         -- Open the soft reserves window
         softreserves = function() GL.SoftRes:draw(); end,
@@ -127,6 +139,16 @@ GL.Commands = GL.Commands or {
         -- Clear all plus ones
         clearplusones = function() GL.PlusOnes:clear(); end,
 
+        -- Export the current raid roster to csv
+        raidcsv = function ()
+            GL.RaidGroups:toCSV();
+        end,
+
+        resetui = function ()
+            Settings:set("UI", {});
+            C_UI.Reload();
+        end,
+
         -- Open the TMB window
         thatsmybis = function() GL.TMB:draw(); end,
 
@@ -137,7 +159,7 @@ GL.Commands = GL.Commands or {
         cpr = function() GL.TMB:draw("cpr"); end,
 
         -- Open the pack mule window
-        packmule = function() GL.Settings:draw("PackMule"); end,
+        packmule = function() Settings:draw("PackMule"); end,
 
         -- Open the loot priority window
         lootpriority = function() GL.LootPriority:drawImporter(); end,
@@ -163,7 +185,7 @@ local Commands = GL.Commands; ---@type Commands
 
 --- Display the command help
 ---@return void
-function Commands:help () GL.Settings:draw("SlashCommands"); end
+function Commands:help () Settings:draw("SlashCommands"); end
 
 --- Helper method to call commands from within the addon
 ---
@@ -221,7 +243,7 @@ function Commands:_dispatch(str)
     end
 
     -- Show the list of commands unless the user disabled this feature
-    if (GL.Settings:get("autoOpenCommandHelp")) then
+    if (Settings:get("autoOpenCommandHelp")) then
         self:help();
     end
 end;

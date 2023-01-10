@@ -140,14 +140,16 @@ function RollOff:announceStart(itemLink, time, note)
     end
 
     -- Check if this item was reserved, if so: mentioned the players who reserved it!
-    if (GL.Settings:get("SoftRes.announceInfoWhenRolling", true)
+    if (GL.Settings:get("SoftRes.announceInfoWhenRolling")
         and not GL:empty(Reserves)
     ) then
         Reserves = table.concat(Reserves, ", ");
         eligiblePlayersMessage = "This item has been reserved by: " .. Reserves;
 
     -- Check if this item is on someone's TMB wish/prio list, if so: mention the player(s) first in line!
-    elseif (GL.Settings:get("TMB.announceInfoWhenRolling", true)
+    elseif ((GL.Settings:get("TMB.announceWishlistInfoWhenRolling")
+            or GL.Settings:get("TMB.announcePriolistInfoWhenRolling")
+        )
         and not GL:empty(TMBDetails)
     ) then
         local WishListEntries = {};
@@ -165,7 +167,9 @@ function RollOff:announceStart(itemLink, time, note)
         end
 
         local EligiblePlayers = {};
-        if (not GL:empty(PrioListEntries)) then
+        if (not GL:empty(PrioListEntries)
+            and GL.Settings:get("TMB.announcePriolistInfoWhenRolling")
+        ) then
             -- Sort the PrioListEntries based on prio (lowest to highest)
             table.sort(PrioListEntries, function (a, b)
                 return a.prio < b.prio;
@@ -185,7 +189,9 @@ function RollOff:announceStart(itemLink, time, note)
                     tinsert(EligiblePlayers, Entry);
                 end
             end
-        elseif (not GL:empty(WishListEntries)) then
+        elseif (not GL:empty(WishListEntries)
+            and GL.Settings:get("TMB.announceWishlistInfoWhenRolling")
+        ) then
             -- Sort the PrioListEntries based on prio (lowest to highest)
             table.sort(WishListEntries, function (a, b)
                 return a.prio < b.prio;
@@ -387,7 +393,10 @@ function RollOff:start(CommMessage)
         end
 
         -- Play raid warning sound
-        GL:playSound(8959, "Master");
+        GL:playSound(SOUNDKIT.RAID_WARNING, "SFX");
+
+        -- Flash the game icon in case the player alt-tabbed
+        FlashClientIcon();
 
         -- Flash the game icon in case the player alt-tabbed
         FlashClientIcon();
@@ -441,6 +450,11 @@ function RollOff:stop(CommMessage)
                 "RAID_WARNING"
             );
         end
+
+        -- We stop listening for rolls one second after the rolloff ends just in case there is server lag/jitter
+        self.rollListenerCancelTimerId = GL.Ace:ScheduleTimer(function()
+            self:stopListeningForRolls();
+        end, 1);
     end
 
     if (self.InitiateCountDownTimer) then
@@ -456,7 +470,7 @@ function RollOff:stop(CommMessage)
     end
 
     -- Play raid warning sound
-    GL:playSound(8959);
+    GL:playSound(SOUNDKIT.RAID_WARNING, "SFX");
 
     RollOff.inProgress = false;
     GL.Ace:CancelTimer(RollOff.StopRollOffTimer);
@@ -647,7 +661,7 @@ function RollOff:processRoll(message)
     GL:debug("RollOff:processRoll");
 
     -- We only track rolls when a rollof is actually in progress
-    if (not RollOff.inProgress) then
+    if (not RollOff.listeningForRolls) then
         return;
     end
 

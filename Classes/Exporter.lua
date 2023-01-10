@@ -3,6 +3,15 @@ local _, GL = ...;
 GL.AceGUI = GL.AceGUI or LibStub("AceGUI-3.0");
 GL.ScrollingTable = GL.ScrollingTable or LibStub("ScrollingTable");
 
+local AceGUI = GL.AceGUI;
+local ScrollingTable = GL.ScrollingTable;
+
+---@type Data
+local Constants = GL.Data.Constants;
+
+---@type DB
+local DB = GL.DB;
+
 ---@class Exporter
 GL.Exporter = {
     visible = false,
@@ -10,10 +19,8 @@ GL.Exporter = {
     disenchantedItemIdentifier = "||de||",
 };
 
-local AceGUI = GL.AceGUI;
-local Exporter = GL.Exporter; ---@type Exporter
-local ScrollingTable = GL.ScrollingTable;
-local Constants = GL.Data.Constants; ---@type Data
+---@type Exporter
+local Exporter = GL.Exporter;
 
 --- Show the export window
 ---
@@ -29,7 +36,7 @@ function Exporter:draw()
 
     -- Fetch award history per date
     local AwardHistoryByDate = {};
-    for _, AwardEntry in pairs(GL.DB.AwardHistory) do
+    for _, AwardEntry in pairs(DB:get("AwardHistory") or {}) do
         local dateString = date('%Y-%m-%d', AwardEntry.timestamp);
         local Entries = GL:tableGet(AwardHistoryByDate, dateString, {});
 
@@ -45,6 +52,7 @@ function Exporter:draw()
     Window:SetLayout("Flow");
     Window:SetWidth(600);
     Window:SetHeight(450);
+    Window:EnableResize(false);
     Window:SetCallback("OnClose", function()
         self:close();
     end);
@@ -56,6 +64,13 @@ function Exporter:draw()
     -- Make sure the window can be closed by pressing the escape button
     _G["GARGUL_EXPORTER_WINDOW"] = Window.frame;
     tinsert(UISpecialFrames, "GARGUL_EXPORTER_WINDOW");
+
+    --[[ DON'T EDIT STOOPID! ]]
+    local DontEditNotification = AceGUI:Create("Label");
+    DontEditNotification:SetFullWidth(true);
+    DontEditNotification:SetJustifyH("MIDDLE");
+    DontEditNotification:SetText("|c00FF0000This is an export feature ONLY, there is no point editing any of the values: THEY WON'T BE SAVED!|r\n\n");
+    Window:AddChild(DontEditNotification);
 
     --[[
         DATES FRAME
@@ -79,8 +94,6 @@ function Exporter:draw()
     ExportBox:SetNumLines(22);
     ExportBox:SetMaxLetters(999999999);
     Window:AddChild(ExportBox);
-    GL.Interface:set(self, "Export", ExportBox);
-
     GL.Interface:set(self, "Export", ExportBox);
 
     --[[
@@ -124,7 +137,7 @@ function Exporter:clearData()
     if (not self.dateSelected) then
         warning = "Are you sure you want to remove your complete reward history table? This deletes ALL loot data and cannot be undone!";
         onConfirm = function()
-            GL.DB.AwardHistory = {};
+            DB:set("AwardHistory", {});
 
             Exporter:close();
             Exporter:draw();
@@ -133,12 +146,12 @@ function Exporter:clearData()
     else -- Only delete entries on the selected date
         warning = string.format("Are you sure you want to remove all data for %s? This cannot be undone!", self.dateSelected);
         onConfirm = function()
-            for key, AwardEntry in pairs(GL.DB.AwardHistory) do
+            for key, AwardEntry in pairs(DB:get("AwardHistory")) do
                 local dateString = date('%Y-%m-%d', AwardEntry.timestamp);
 
                 if (dateString == self.dateSelected) then
                     AwardEntry = nil;
-                    GL.DB.AwardHistory[key] = nil;
+                    DB:set("AwardHistory." .. key, nil);
                 end
             end
 
@@ -189,7 +202,7 @@ function Exporter:getLootEntries()
 
     local Entries = {};
 
-    for _, AwardEntry in pairs(GL.DB.AwardHistory) do
+    for _, AwardEntry in pairs(DB:get("AwardHistory")) do
         local concernsDisenchantedItem = AwardEntry.awardedTo == self.disenchantedItemIdentifier;
         local dateString = date('%Y-%m-%d', AwardEntry.timestamp);
 
@@ -389,7 +402,7 @@ function Exporter:drawDatesTable(Parent, Dates)
     local Table = ScrollingTable:CreateST(Columns, 21, 15, nil, Parent);
     Table:EnableSelection(true);
     Table:SetWidth(120);
-    Table.frame:SetPoint("BOTTOMLEFT", Parent, "BOTTOMLEFT", 50, 78);
+    Table.frame:SetPoint("BOTTOMLEFT", Parent, "BOTTOMLEFT", 50, 58);
 
     Table:RegisterEvents({
         ["OnClick"] = function()

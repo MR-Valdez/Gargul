@@ -12,6 +12,30 @@ GL.Interface.Changelog = {
 
     History = {
         {
+            version = "5.0.7",
+            date = "December 28th, 2022",
+            Changes = {
+                "GDKP time gain: raiders using Gargul can now immediately see the loot you've queued up and can prepare and bid accordingly before the auctions have even started!",
+                "GDKP time gain 2: Added a 'what to do when no one bids' setting that allows you to automatically skip or disenchant unwanted items!",
+                "Fixed an issue where rolls would not be accepted right when / shortly after a rolloff has ended",
+                "Many QoL fixes, check the full changelog on curseforge/wago or our discord server above",
+            },
+        },
+        {
+            version = "5.0.5",
+            date = "December 23rd, 2022",
+            Changes = {
+                "GDKP auto bidding, auto awarding, queued auctions, and other QoL things just hit Gargul! Go check them out with |c00a79eff/gl gdkp|r!",
+            },
+        },
+        {
+            version = "5.0.4",
+            date = "December 19th, 2022",
+            Changes = {
+                "GDKP IS HERE! Next level GDKP automation, bidding, tracking and pot calculation and distribution. Built on Gargul's solid core and backed by an active community!\n\nEncourage raid leaders to leverage it or check it out for yourself with |c00a79eff/gl gdkp|r, no need to be in a group! Coming soon: queued auctions! Happy Holidays <3",
+            },
+        },
+        {
             version = "4.12.14",
             date = "December 1st, 2022",
             Changes = {
@@ -230,14 +254,20 @@ local Changelog = GL.Interface.Changelog; ---@type ChangelogInterface
 function Changelog:reportChanges()
     GL:debug("Changelog:reportChanges");
 
-    if (not GL.Version.firstBoot -- This is not this version's first boot, no need to report
-        or not GL.Settings:get("changeLog", true) -- The user is not interested in the changelog
-    ) then
+    -- This is not this version's first boot, no need to report
+    if (not GL.Version.firstBoot) then
         return;
     end
 
     local latestVersionChangesShown = GL.DB.LoadDetails.latestVersionChangesShown or 0;
     local latestChangelogVersion = self.History[1].version;
+
+    -- If changelog is disabled and there are no pressing matters, then return
+    if (not GL.Settings:get("changeLog", true)
+        and GL.Version:leftIsOlderThanRight("5.0.4", latestVersionChangesShown)
+    ) then
+        return;
+    end
 
     -- There are no changes to display between this version and the last, skip!
     if (not GL.Version:leftIsOlderThanRight(latestVersionChangesShown, latestChangelogVersion)) then
@@ -277,6 +307,15 @@ function Changelog:draw()
     GL.Interface:set(self, "Window", Window);
 
     Window:SetPoint(GL.Interface:getPosition("Changelog"));
+
+    --[[ CHRISTMAS HOLIDAYS SANTA HAT ]]
+    local SantaHat = GL.AceGUI:Create("Icon");
+    SantaHat:SetWidth(83);
+    SantaHat:SetHeight(81);
+    SantaHat:SetImage("Interface/AddOns/Gargul/Assets/Icons/santa_hat");
+    SantaHat.frame:SetParent(Window.frame);
+    SantaHat.frame:SetPoint("TOPLEFT", Window.frame, "TOPLEFT", -26, 36);
+    SantaHat.frame:Show();
 
     local ScrollFrameHolder = GL.AceGUI:Create("ScrollFrame");
     ScrollFrameHolder:SetLayout("Fill");
@@ -330,13 +369,11 @@ function Changelog:draw()
 
     for _, LogEntry in pairs(self.History) do
         -- Add some whitespace between this and the previous entry
-        if (not firstEntry) then
-            HorizontalSpacer = GL.AceGUI:Create("SimpleGroup");
-            HorizontalSpacer:SetLayout("FILL");
-            HorizontalSpacer:SetFullWidth(true);
-            HorizontalSpacer:SetHeight(16);
-            ScrollFrame:AddChild(HorizontalSpacer);
-        end
+        HorizontalSpacer = GL.AceGUI:Create("SimpleGroup");
+        HorizontalSpacer:SetLayout("FILL");
+        HorizontalSpacer:SetFullWidth(true);
+        HorizontalSpacer:SetHeight(16);
+        ScrollFrame:AddChild(HorizontalSpacer);
 
         -- Version label
         local VersionLabel = AceGUI:Create("Label");
@@ -356,13 +393,35 @@ function Changelog:draw()
                 ScrollFrame:AddChild(HorizontalSpacer);
             end
 
-            -- Changes
-            local ChangeLabel = AceGUI:Create("Label");
-            ChangeLabel:SetText(string.format("|c00a79eff-|r|c00FFF569 %s|r", change));
-            ChangeLabel:SetFontObject(_G["GameFontNormal"]);
-            ChangeLabel:SetHeight(20);
-            ChangeLabel:SetFullWidth(true);
-            ScrollFrame:AddChild(ChangeLabel);
+            -- Highlight GDKP update
+            --if (LogEntry.version == "5.0.7" and not GL.isRetail) then
+            if (false and not GL.isRetail) then
+                HorizontalSpacer = GL.AceGUI:Create("SimpleGroup");
+                HorizontalSpacer:SetLayout("FILL");
+                HorizontalSpacer:SetFullWidth(true);
+                HorizontalSpacer:SetHeight(6);
+                ScrollFrame:AddChild(HorizontalSpacer);
+
+                local ChangeLabel = AceGUI:Create("Label");
+                ChangeLabel:SetText(string.format("\n|c00FFF569%s|r\n \n", change));
+                ChangeLabel:SetFontObject(_G["GameFontNormal"]);
+                ChangeLabel:SetHeight(20);
+                ChangeLabel:SetFullWidth(true);
+                ScrollFrame:AddChild(ChangeLabel);
+
+                local LCG = LibStub("LibCustomGlowGargul-1.0");
+                local BorderColor = {1, 1, 1, 1};
+                LCG.PixelGlow_Start(ChangeLabel.frame, BorderColor, 140, 0, 5, 3, 10, 2, false, 2);
+                BorderColor = {.77, .12, .23, 1};
+                LCG.PixelGlow_Start(ChangeLabel.frame, BorderColor, 70, .02, 5, 3, 10, 2, false, 1);
+            else
+                local ChangeLabel = AceGUI:Create("Label");
+                ChangeLabel:SetText(string.format("|c00a79eff-|r|c00FFF569 %s|r", change));
+                ChangeLabel:SetFontObject(_G["GameFontNormal"]);
+                ChangeLabel:SetHeight(20);
+                ChangeLabel:SetFullWidth(true);
+                ScrollFrame:AddChild(ChangeLabel);
+            end
 
             firstChange = false;
         end
@@ -401,7 +460,7 @@ function Changelog:close()
     Settings:set("UI.Changelog.Position.offsetY", offsetY);
 
     -- Clear the frame and its widgets
-    AceGUI:Release(Window);
+    GL.Interface:release(Window);
     self.isVisible = false;
 end
 

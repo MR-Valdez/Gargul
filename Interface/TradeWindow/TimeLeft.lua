@@ -451,6 +451,7 @@ function TimeLeft:refreshBars()
 
     local ItemsWithTradeTimeRemaining = {};
     local tradeTimeRemainingByLink = {};
+    local selfAwardedItemCountByLink = {};
     local awardedItemCountByLink = {};
     local deItemCountByLink = {};
 
@@ -480,6 +481,7 @@ function TimeLeft:refreshBars()
                 --    items unreceived for both award and de
                 local unreceived = false;
                 local deUnreceived = false;
+                local selfAwardedCount = 0;
                 local unreceivedCount = 0;
                 local deUnreceivedCount = 0;
                 for _, line in pairs(GL.AwardedLoot:tooltipLines(itemLink) or {}) do
@@ -489,11 +491,14 @@ function TimeLeft:refreshBars()
                     elseif (string.match(line, "(item given: no)")) then
                         unreceived = true;
                         unreceivedCount = unreceivedCount + 1
+                    elseif (string.match(line, GL.User.name)) then
+                        selfAwardedCount = selfAwardedCount + 1
                     end
                 end
 
                 awardedItemCountByLink[itemLink] = unreceivedCount
                 deItemCountByLink[itemLink] = deUnreceivedCount
+                selfAwardedItemCountByLink[itemLink] = selfAwardedCount
 
                 tinsert(ItemsWithTradeTimeRemaining, {
                     icon = icon,
@@ -569,9 +574,9 @@ function TimeLeft:refreshBars()
         Window:SetHeight(math.max(Window:GetHeight(), 16) + 18);
 
         local TimerBar = LibStub("LibCandyBarGargul-3.0"):New(
-            "Interface\\AddOns\\Gargul\\Assets\\Textures\\timer-bar",
-            240,
-            18
+                "Interface\\AddOns\\Gargul\\Assets\\Textures\\timer-bar",
+                240,
+                18
         );
         TimerBar:SetParent(Window);
         TimerBar:SetDuration(BagItem.timeRemaining);
@@ -580,7 +585,10 @@ function TimeLeft:refreshBars()
         TimerBar:SetIcon(BagItem.icon);
         local awarded = false;
         local disenchanted = false;
-        if (BagItem.unreceived and awardedItemCountByLink[BagItem.itemLink] > 0) then
+        if (selfAwardedItemCountByLink[BagItem.itemLink] > 0 and BagItem.timeRemaining > 600) then
+            selfAwardedItemCountByLink[BagItem.itemLink] = selfAwardedItemCountByLink[BagItem.itemLink] - 1;
+            break;
+        elseif (BagItem.unreceived and awardedItemCountByLink[BagItem.itemLink] > 0) then
             TimerBar:SetIcon("Interface\\AddOns\\Gargul\\Assets\\Icons\\trophy");
             awardedItemCountByLink[BagItem.itemLink] = awardedItemCountByLink[BagItem.itemLink] - 1;
             awarded = true;

@@ -561,8 +561,26 @@ function TimeLeft:refreshBars()
                     elseif (string.match(line, "given: no")) then
                         unreceived = true;
                         unreceivedCount = unreceivedCount + 1
-                    elseif (string.match(line, GL.User.name)) then
-                        selfAwardedCount = selfAwardedCount + 1
+                    elseif (string.match(line, string.lower(GL.User.name))) then
+                        --Looks for Self AwardedLoot and verifies if user has it equipped or makes it soulbound
+                        local itemCount = GetItemCount(itemLink)
+                        if (itemCount > 0) then
+                            local selfCheck = true
+                            for selfBag = 0, numberOfBagsToCheck do
+                                for selfSlot = 1, GL:getContainerNumSlots(selfBag) do
+                                    local _, _, _, _, _, _, selfItemLink, _, _ = GL:getContainerItemInfo(selfBag, selfSlot);
+                                    if (selfItemLink == itemLink) then
+                                        local selfTimeRemaining = GL:inventoryItemTradeTimeRemaining(selfBag, selfSlot)
+                                        if (selfTimeRemaining < 1 or selfTimeRemaining == GL.Data.Constants.itemIsNotBound) then
+                                            selfCheck = false
+                                        end
+                                    end
+                                end
+                            end
+                            if (selfCheck) then
+                                selfAwardedCount = selfAwardedCount + 1
+                            end
+                        end
                     end
                 end
 
@@ -640,150 +658,151 @@ function TimeLeft:refreshBars()
             break;
         end
 
-        -- Make sure the bar window has the appropriate height
-        Window:SetHeight(math.max(Window:GetHeight(), 16) + 18);
-
-        local TimerBar = LibStub("LibCandyBarGargul-3.0"):New(
-                "Interface\\AddOns\\Gargul\\Assets\\Textures\\timer-bar",
-                240,
-                18
-        );
-        TimerBar:SetParent(Window);
-        TimerBar:SetDuration(BagItem.timeRemaining);
-        TimerBar:SetColor(0, 1, 0, .3); -- Reset color to green
-        TimerBar:SetLabel(BagItem.itemLink);
-        TimerBar:SetIcon(BagItem.icon);
-        local awarded = false;
-        local disenchanted = false;
         if (selfAwardedItemCountByLink[BagItem.itemLink] > 0 and BagItem.timeRemaining > 600) then
             selfAwardedItemCountByLink[BagItem.itemLink] = selfAwardedItemCountByLink[BagItem.itemLink] - 1;
-            break;
-        elseif (BagItem.unreceived and awardedItemCountByLink[BagItem.itemLink] > 0) then
-            TimerBar:SetIcon("Interface\\AddOns\\Gargul\\Assets\\Icons\\trophy");
-            awardedItemCountByLink[BagItem.itemLink] = awardedItemCountByLink[BagItem.itemLink] - 1;
-            awarded = true;
-        elseif (BagItem.deUnreceived and deItemCountByLink[BagItem.itemLink] > 0) then
-            TimerBar:SetIcon("Interface\\AddOns\\Gargul\\Assets\\Icons\\disenchant");
-            deItemCountByLink[BagItem.itemLink] = deItemCountByLink[BagItem.itemLink] - 1;
-            disenchanted = true;
-        end
+        else
+            -- Make sure the bar window has the appropriate height
+            Window:SetHeight(math.max(Window:GetHeight(), 16) + 18);
 
-        TimerBar:Set("type", "TRADE_WINDOW_TIME_LEFT");
-        TimerBar.Details = BagItem;
-
-        local offsetY = ((index - 1) * 18) * -1 - 16;
-        TimerBar:SetPoint("TOP", Window, "TOP", 0, offsetY);
-        TimerBar.candyBarLabel:SetFont(STANDARD_TEXT_FONT, 12, "OUTLINE");
-
-        -- Make the bar turn green/yellow/red based on time left
-        TimerBar:AddUpdateFunction(function (Bar)
-            local percentageLeft = (BagItem.timeRemaining / 7200) * 100;
-
-            if (awarded or disenchanted) then
-                Bar:SetColor(0, 0, 0, .6);
-            elseif (percentageLeft >= 60) then
-                Bar:SetColor(0, 1, 0, .3);
-            elseif (percentageLeft >= 30) then
-                Bar:SetColor(1, 1, 0, .3);
-            else
-                Bar:SetColor(1, 0, 0, .3);
+            local TimerBar = LibStub("LibCandyBarGargul-3.0"):New(
+                    "Interface\\AddOns\\Gargul\\Assets\\Textures\\timer-bar",
+                    240,
+                    18
+            );
+            TimerBar:SetParent(Window);
+            TimerBar:SetDuration(BagItem.timeRemaining);
+            TimerBar:SetColor(0, 1, 0, .3); -- Reset color to green
+            TimerBar:SetLabel(BagItem.itemLink);
+            TimerBar:SetIcon(BagItem.icon);
+            local awarded = false;
+            local disenchanted = false;
+            if (BagItem.unreceived and awardedItemCountByLink[BagItem.itemLink] > 0) then
+                TimerBar:SetIcon("Interface\\AddOns\\Gargul\\Assets\\Icons\\trophy");
+                awardedItemCountByLink[BagItem.itemLink] = awardedItemCountByLink[BagItem.itemLink] - 1;
+                awarded = true;
+            elseif (BagItem.deUnreceived and deItemCountByLink[BagItem.itemLink] > 0) then
+                TimerBar:SetIcon("Interface\\AddOns\\Gargul\\Assets\\Icons\\disenchant");
+                deItemCountByLink[BagItem.itemLink] = deItemCountByLink[BagItem.itemLink] - 1;
+                disenchanted = true;
             end
-        end);
 
-        local onDoubleClick = function ()
-            -- Open a trade window with the targeted unit if we don't have one open yet
-            if (not TradeFrame:IsShown()) then
-                if (not UnitIsPlayer("target")) then
+            TimerBar:Set("type", "TRADE_WINDOW_TIME_LEFT");
+            TimerBar.Details = BagItem;
+
+            local offsetY = (getn(self.Bars) * 18) * -1 - 16;
+            TimerBar:SetPoint("TOP", Window, "TOP", 0, offsetY);
+            TimerBar.candyBarLabel:SetFont(STANDARD_TEXT_FONT, 12, "OUTLINE");
+
+            -- Make the bar turn green/yellow/red based on time left
+            TimerBar:AddUpdateFunction(function (Bar)
+                local percentageLeft = (BagItem.timeRemaining / 7200) * 100;
+
+                if (awarded or disenchanted) then
+                    Bar:SetColor(0, 0, 0, .6);
+                elseif (percentageLeft >= 60) then
+                    Bar:SetColor(0, 1, 0, .3);
+                elseif (percentageLeft >= 30) then
+                    Bar:SetColor(1, 1, 0, .3);
+                else
+                    Bar:SetColor(1, 0, 0, .3);
+                end
+            end);
+
+            local onDoubleClick = function ()
+                -- Open a trade window with the targeted unit if we don't have one open yet
+                if (not TradeFrame:IsShown()) then
+                    if (not UnitIsPlayer("target")) then
+                        return;
+                    end
+
+                    GL.TradeWindow:open("target", function ()
+                        GL.TradeWindow:addItem(GL:getItemIDFromLink(BagItem.itemLink));
+                    end, true);
+
                     return;
                 end
 
-                GL.TradeWindow:open("target", function ()
-                    GL.TradeWindow:addItem(GL:getItemIDFromLink(BagItem.itemLink));
-                end, true);
+                -- A trade window is open already, just add the item
+                GL.TradeWindow:addItem(GL:getItemIDFromLink(BagItem.itemLink));
+            end;
 
-                return;
-            end
-
-            -- A trade window is open already, just add the item
-            GL.TradeWindow:addItem(GL:getItemIDFromLink(BagItem.itemLink));
-        end;
-
-        local lastClickTime;
-        TimerBar:SetScript("OnMouseUp", function(_, mouseButtonPressed)
-            -- The user doesnt want to use shortcut keys when solo
-            if (not GL.User.isInGroup
-                and GL.Settings:get("ShortcutKeys.onlyInGroup")
-            ) then
-                return;
-            end
-
-            local keyPressIdentifier = GL.Events:getClickCombination(mouseButtonPressed);
-
-            -- Open the action selection window
-            if (keyPressIdentifier == GL.Settings:get("ShortcutKeys.rollOffOrAuction")) then
-                if (GL.GDKP.Session:activeSessionID()
-                    and not GL.GDKP.Session:getActive().lockedAt
+            local lastClickTime;
+            TimerBar:SetScript("OnMouseUp", function(_, mouseButtonPressed)
+                -- The user doesnt want to use shortcut keys when solo
+                if (not GL.User.isInGroup
+                        and GL.Settings:get("ShortcutKeys.onlyInGroup")
                 ) then
-                    GL.Interface.GDKP.Auctioneer:draw(BagItem.itemLink);
-                else
+                    return;
+                end
+
+                local keyPressIdentifier = GL.Events:getClickCombination(mouseButtonPressed);
+
+                -- Open the action selection window
+                if (keyPressIdentifier == GL.Settings:get("ShortcutKeys.rollOffOrAuction")) then
+                    if (GL.GDKP.Session:activeSessionID()
+                            and not GL.GDKP.Session:getActive().lockedAt
+                    ) then
+                        GL.Interface.GDKP.Auctioneer:draw(BagItem.itemLink);
+                    else
+                        GL.MasterLooterUI:draw(BagItem.itemLink);
+                    end
+                    -- Open the roll window
+                elseif (keyPressIdentifier == GL.Settings:get("ShortcutKeys.rollOff")) then
                     GL.MasterLooterUI:draw(BagItem.itemLink);
-                end
-            -- Open the roll window
-            elseif (keyPressIdentifier == GL.Settings:get("ShortcutKeys.rollOff")) then
-                GL.MasterLooterUI:draw(BagItem.itemLink);
 
-            -- Open the award window
-            elseif (keyPressIdentifier == GL.Settings:get("ShortcutKeys.award")) then
-                GL.Interface.Award:draw(BagItem.itemLink);
+                    -- Open the award window
+                elseif (keyPressIdentifier == GL.Settings:get("ShortcutKeys.award")) then
+                    GL.Interface.Award:draw(BagItem.itemLink);
 
-            elseif (keyPressIdentifier == GL.Settings:get("ShortcutKeys.disenchant")) then
-                GL.PackMule:disenchant(BagItem.itemLink);
+                elseif (keyPressIdentifier == GL.Settings:get("ShortcutKeys.disenchant")) then
+                    GL.PackMule:disenchant(BagItem.itemLink);
 
-            -- Unregistered hotkey was pressed and it turns out to be SHIFT_CLICK, add item link to chat/editbox etc
-            elseif (keyPressIdentifier == "SHIFT_CLICK") then
-                if (ChatFrameEditBox and ChatFrameEditBox:IsVisible()) then
-                    ChatFrameEditBox:Insert(BagItem.itemLink);
+                    -- Unregistered hotkey was pressed and it turns out to be SHIFT_CLICK, add item link to chat/editbox etc
+                elseif (keyPressIdentifier == "SHIFT_CLICK") then
+                    if (ChatFrameEditBox and ChatFrameEditBox:IsVisible()) then
+                        ChatFrameEditBox:Insert(BagItem.itemLink);
+                    else
+                        ChatEdit_InsertLink(BagItem.itemLink);
+                    end
                 else
-                    ChatEdit_InsertLink(BagItem.itemLink);
-                end
-            else
-                local currentTime = GetTime();
+                    local currentTime = GetTime();
 
-                -- Double click behavior detected
-                if (lastClickTime and currentTime - lastClickTime <= .5) then
-                    onDoubleClick();
-                    lastClickTime = nil;
+                    -- Double click behavior detected
+                    if (lastClickTime and currentTime - lastClickTime <= .5) then
+                        onDoubleClick();
+                        lastClickTime = nil;
+                    else
+                        lastClickTime = currentTime;
+                    end
+                end
+            end)
+
+            TimerBar:SetScript("OnLeave", function()
+                self:hideExplanationWindow();
+                GameTooltip:Hide();
+            end);
+
+            -- Show a gametooltip for the item up for roll
+            -- when hovering over the progress bar
+            TimerBar:SetScript("OnEnter", function()
+                if (self:showExplanationWindow()) then
+                    if (GL:inTable({"BOTTOM", "BOTTOMLEFT", "BOTTOMRIGHT"}, select(1, self.Window:GetPoint()))) then
+                        GameTooltip:SetOwner(self.Window, "ANCHOR_TOP");
+                    else
+                        GameTooltip:SetOwner(self.HotKeyExplanation.frame, "ANCHOR_BOTTOM");
+                    end
                 else
-                    lastClickTime = currentTime;
+                    GameTooltip:SetOwner(Window, "ANCHOR_TOP");
                 end
-            end
-        end)
+                GameTooltip:SetHyperlink(BagItem.itemLink);
+                GameTooltip:Show();
+            end);
 
-        TimerBar:SetScript("OnLeave", function()
-            self:hideExplanationWindow();
-            GameTooltip:Hide();
-        end);
+            TimerBar:Start(7200); -- Default trade duration is two hours
+            tinsert(self.Bars, TimerBar);
 
-        -- Show a gametooltip for the item up for roll
-        -- when hovering over the progress bar
-        TimerBar:SetScript("OnEnter", function()
-            if (self:showExplanationWindow()) then
-                if (GL:inTable({"BOTTOM", "BOTTOMLEFT", "BOTTOMRIGHT"}, select(1, self.Window:GetPoint()))) then
-                    GameTooltip:SetOwner(self.Window, "ANCHOR_TOP");
-                else
-                    GameTooltip:SetOwner(self.HotKeyExplanation.frame, "ANCHOR_BOTTOM");
-                end
-            else
-                GameTooltip:SetOwner(Window, "ANCHOR_TOP");
-            end
-            GameTooltip:SetHyperlink(BagItem.itemLink);
-            GameTooltip:Show();
-        end);
-
-        TimerBar:Start(7200); -- Default trade duration is two hours
-        tinsert(self.Bars, TimerBar);
-
-        barsAvailable = true;
+            barsAvailable = true;
+        end
     end
 
     if (barsAvailable) then

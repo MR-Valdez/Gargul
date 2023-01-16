@@ -522,6 +522,7 @@ function TimeLeft:refreshBars()
     local tradeTimeRemainingByLink = {};
     local selfAwardedItemCountByLink = {};
     local awardedItemCountByLink = {};
+    local tradedCountByLink = {};
     local deItemCountByLink = {};
 
     local numberOfBagsToCheck = 4;
@@ -553,6 +554,7 @@ function TimeLeft:refreshBars()
                 local selfAwardedCount = 0;
                 local unreceivedCount = 0;
                 local deUnreceivedCount = 0;
+                local tradedCount = 0;
                 for _, line in pairs(GL.AwardedLoot:tooltipLines(itemLink) or {}) do
                     line = string.lower(line);
                     if (string.match(line, "|de|") and string.match(line, "given: no")) then
@@ -581,12 +583,15 @@ function TimeLeft:refreshBars()
                                 selfAwardedCount = selfAwardedCount + 1
                             end
                         end
+                    elseif (string.match(line, "given: yes")) then
+                        tradedCount = tradedCount + 1
                     end
                 end
 
                 awardedItemCountByLink[itemLink] = unreceivedCount
                 deItemCountByLink[itemLink] = deUnreceivedCount
                 selfAwardedItemCountByLink[itemLink] = selfAwardedCount
+                tradedCountByLink[itemLink] = tradedCount + selfAwardedCount
 
                 tinsert(ItemsWithTradeTimeRemaining, {
                     icon = icon,
@@ -658,7 +663,21 @@ function TimeLeft:refreshBars()
             break;
         end
 
-        if (selfAwardedItemCountByLink[BagItem.itemLink] > 0 and BagItem.timeRemaining > 600) then
+        local itemCount = GetItemCount(BagItem.itemLink)
+        local countOfTradeableItemsByLink = 0
+        for key, value in pairs(ItemsWithTradeTimeRemaining) do
+            if(BagItem.itemLink == value.itemLink) then
+                countOfTradeableItemsByLink = countOfTradeableItemsByLink + 1
+            end
+        end
+
+        local droppedCount = 0
+        if (GL.DroppedLoot.DroppedCountByItemLink[BagItem.itemLink]) then
+            droppedCount = GL.DroppedLoot.DroppedCountByItemLink[BagItem.itemLink]
+        end
+
+        if ((itemCount >= countOfTradeableItemsByLink and (countOfTradeableItemsByLink == droppedCount-(tradedCountByLink[BagItem.itemLink]-selfAwardedItemCountByLink[BagItem.itemLink])) or droppedCount == countOfTradeableItemsByLink)
+                and (selfAwardedItemCountByLink[BagItem.itemLink] > 0 and BagItem.timeRemaining > 600)) then
             selfAwardedItemCountByLink[BagItem.itemLink] = selfAwardedItemCountByLink[BagItem.itemLink] - 1;
         else
             -- Make sure the bar window has the appropriate height

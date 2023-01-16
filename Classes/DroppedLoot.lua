@@ -4,6 +4,8 @@ local _, GL = ...;
 ---@class DroppedLoot
 GL.DroppedLoot = {
     Announced = {},
+    LoggedDropped = {},
+    DroppedCountByItemLink = {},
     initialized = false,
     ButtonsHooked = {},
     allButtonsHooked = false,
@@ -96,6 +98,9 @@ function DroppedLoot:lootReady()
             end
         end, .1);
     end
+
+    -- Log DroppedItems to be used for logic in TradeWindow.TimeLeft
+    self:logDroppedItems()
 
     -- Only announce loot in chat if the setting is enabled
     if (GL.User.isMasterLooter
@@ -378,6 +383,71 @@ function DroppedLoot:hookClickEvents()
 
             self.ButtonsHooked[buttonProvider][buttonIndex] = true;
         end
+    end
+end
+
+function DroppedLoot:logDroppedItems(Modifiers)
+    GL:debug("DroppedLoot:logDroppedItems");
+
+    Modifiers = Modifiers or {};
+    local Functions = Modifiers.Functions or {
+        GetNumLootItems = GetNumLootItems,
+        GetLootSlotInfo = GetLootSlotInfo,
+        GetLootSlotLink = GetLootSlotLink,
+        GetLootSlotType = GetLootSlotType,
+        GetLootSourceInfo = GetLootSourceInfo,
+    };
+
+    -- The sourceGUID is something we use to make sure
+    -- we don't announce the same loot multiple times
+    local sourceGUID = false;
+
+    -- Get the total number of items that dropped
+    local itemCount = Functions.GetNumLootItems();
+
+    GL:debug("DroppedLoot:logDroppedItems before loop ", itemCount);
+    -- Loop through every item in the loot window
+    for lootIndex = 1, itemCount do
+        local itemLink = Functions.GetLootSlotLink(lootIndex);
+
+        --Use of function to easier control loot loop
+        (function()
+            if (not itemLink) then
+                return;
+            end
+
+            -- Make sure we don't override sourceGUID with false/nil if it was already set!
+            sourceGUID = sourceGUID or Functions.GetLootSourceInfo(lootIndex);
+
+            -- We're missing crucial data, skip!
+            if (GL:empty(sourceGUID) -- Make sure we have a sourceGUID
+                    or DroppedLoot.LoggedDropped[sourceGUID] -- We apparently already logged these items
+            ) then
+                return;
+            end
+
+            -- Check if we need to announce this item
+            local itemID = tonumber(GL:getItemIDFromLink(itemLink)) or 0;
+            if (not GL:higherThanZero(itemID)) then
+                return;
+            end
+
+            local lootType = Functions.GetLootSlotType(lootIndex);
+            -- Make sure we're dealing with an actual item here, not currency for example
+            if (lootType ~= LOOT_SLOT_ITEM) then
+                return;
+            end
+
+            if (not DroppedLoot.DroppedCountByItemLink[itemLink]) then
+                DroppedLoot.DroppedCountByItemLink[itemLink] = 1
+            else
+                DroppedLoot.DroppedCountByItemLink[itemLink] = DroppedLoot.DroppedCountByItemLink[itemLink] + 1;
+            end
+        end)();
+    end
+
+    if (sourceGUID) then
+        DroppedLoot.LoggedDropped[sourceGUID] = true;
     end
 end
 
@@ -728,6 +798,56 @@ function DroppedLoot:announceTest(...)
 
     GL:onItemLoadDo(itemIDs, function (Items)
         self:announce({
+            Functions = {
+                GetNumLootItems = function () return GL:count(Items); end,
+                GetLootSlotInfo = function (slot)
+                    local SlotItem = Items[slot];
+
+                    return SlotItem.icon, SlotItem.name, 1, nil, SlotItem.quality, false, false, nil, true;
+                end,
+                GetLootSlotLink = function (slot)
+                    return Items[slot].link or nil;
+                end,
+                GetLootSlotType = function(slot)
+                    local itemLink = Items[slot].link or "";
+
+                    if (GL:strContains(itemLink, "Hcurrency:")) then
+                        return LOOT_SLOT_CURRENCY;
+                    end
+
+                    return LOOT_SLOT_ITEM;
+                end,
+                GetLootSourceInfo = function() return GL:uuid() end,
+            }
+        });
+    end);
+end
+
+--- Helper Function used to test Logging of Dropped Items
+---
+---@return void
+function DroppedLoot:logDroppedTest(...)
+    GL:debug("logDroppedTest")
+    local itemIDs = ...;
+
+    if (type(itemIDs) ~= "table") then
+        itemIDs = {itemIDs};
+    end
+
+    -- Make sure all item links are translated to IDs
+    for key, value in pairs(itemIDs) do
+        value = string.trim(value);
+        local concernsID = GL:higherThanZero(tonumber(value));
+
+        if (not concernsID) then
+            value = GL:getItemIDFromLink(value) or 0;
+        end
+
+        itemIDs[key] = value;
+    end
+
+    GL:onItemLoadDo(itemIDs, function (Items)
+        self:logDroppedItems({
             Functions = {
                 GetNumLootItems = function () return GL:count(Items); end,
                 GetLootSlotInfo = function (slot)

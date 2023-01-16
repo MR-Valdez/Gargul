@@ -120,6 +120,8 @@ function DroppedLoot:draw(Parent)
     local OpenDataButton = GL.AceGUI:Create("Button");
     OpenDataButton:SetText("Simulate drop");
     OpenDataButton:SetCallback("OnClick", function()
+        -- LogDroppedTest will fill the DroppedLoot table
+        -- GL.DroppedLoot:logDroppedTest(GL:strSplit(TestItems:GetText(), ";"));
         GL.DroppedLoot:announceTest(GL:strSplit(TestItems:GetText(), ";"));
     end);
     Parent:AddChild(OpenDataButton);

@@ -698,7 +698,8 @@ function TimeLeft:refreshBars(byRefresh)
         if (
                 (
                     (itemCount >= countOfTradableItemsByLink
-                        and countOfTradableItemsByLink == droppedCount-(tradedCountByLink[BagItem.itemLink]-selfAwardedItemCountByLink[BagItem.itemLink]))
+                        and countOfTradableItemsByLink == droppedCount-(tradedCountByLink[BagItem.itemLink]-selfAwardedItemCountByLink[BagItem.itemLink])
+                    )
                     or droppedCount == countOfTradableItemsByLink
                 )
                 and selfAwardedItemCountByLink[BagItem.itemLink] > 0

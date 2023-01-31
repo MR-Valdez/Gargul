@@ -165,13 +165,13 @@ GL.Data.Constants = {
             "Lantis",
             "Lemmings19",
             "Schweex",
-            "Tonio",
         },
         Uncommon = {
             "CarbonFury",
             "Silvertungh",
             "Sneaky",
             "Snickels",
+            "Tonio",
         },
         Rare = {
             "Busmonstret",
@@ -179,6 +179,7 @@ GL.Data.Constants = {
             "Kelziad",
             "Nambojambo",
             "Scratchd",
+            "Sgtglimmer",
             "WaDaFruCK",
         },
         Epic = {
@@ -232,16 +233,6 @@ GL.Data.Constants = {
         "LootFast2",
         "RCLootCouncil_Classic",
         "SpeedyAutoLoot",
-    },
-
-    DroppedLoot = {
-        WhenToLogLoot = {
-            [1] = "When in a party or raid",
-            [2] = "When in a raid",
-            [3] = "When master loot is active",
-            [4] = "When I'm the master looter",
-            [5] = "When I'm the raid leader",
-        }
     },
 
     GDKP = {
@@ -538,13 +529,16 @@ GL.Data.Constants = {
             deleteAwardedItem = 16,
             startGDKPAuction = 17,
             stopGDKPAuction = 18,
-            rescheduleGDKPAuction = 19,
-            refreshGDKPAuction = 20,
+            extendGDKPAuction = 19,
+            --refreshGDKPAuction = 20, ---@todo: use or remove, unused atm
             requestGDKPSession = 21,
             broadcastGDKPSession = 22,
             broadcastGDKPMutation = 23,
             broadcastGDKPAuctionQueue = 24,
             checkForUpdate = 25,
+            broadcastPlusOnesData = 26,
+            requestPlusOnesData = 27,
+            broadcastPlusOnesMutation = 28,
         },
     },
 

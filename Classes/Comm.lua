@@ -75,9 +75,6 @@ Comm.Actions = {
     [Actions.rescheduleGDKPAuction] = function (Message)
         GL.GDKP.Auction:extend(Message);
     end,
-    [Actions.refreshGDKPAuction] = function (Message)
-        GL.GDKP.Auction:refresh(Message);
-    end,
     [Actions.broadcastGDKPAuctionQueue] = function (Message)
         GL.GDKP.Auction:receiveQueue(Message);
     end,
@@ -89,6 +86,15 @@ Comm.Actions = {
     end,
     [Actions.broadcastBoostedRollsMutation] = function (Message)
         GL.BoostedRolls:receiveUpdate(Message);
+    end,
+    [Actions.broadcastPlusOnesData] = function (Message)
+        GL.PlusOnes:receiveBroadcast(Message);
+    end,
+    [Actions.requestPlusOnesData] = function (Message)
+        GL.PlusOnes:replyToDataRequest(Message);
+    end,
+    [Actions.broadcastPlusOnesMutation] = function (Message)
+        GL.PlusOnes:receiveUpdate(Message);
     end
 };
 

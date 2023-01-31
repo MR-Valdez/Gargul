@@ -689,7 +689,7 @@ function TimeLeft:refreshBars(byRefresh)
         -- z : selfAwardedCount > 0
         -- i : timeRemaining > 600
         --
-        -- If (x or y) and (z & i) then
+        -- If (x or y) and z and i then
         --  decrement selfAwardedCount by 1
         -- else
         --  add TimerBar

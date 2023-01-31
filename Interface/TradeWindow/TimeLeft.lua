@@ -696,10 +696,8 @@ function TimeLeft:refreshBars(byRefresh)
         -- else
         --  add TimerBar
         if (
-                (
-                    (itemCount >= countOfTradableItemsByLink
-                        and countOfTradableItemsByLink == droppedCount-(tradedCountByLink[BagItem.itemLink]-selfAwardedItemCountByLink[BagItem.itemLink])
-                    )
+                (itemCount >= countOfTradableItemsByLink
+                    and countOfTradableItemsByLink == droppedCount-(tradedCountByLink[BagItem.itemLink]-selfAwardedItemCountByLink[BagItem.itemLink])
                     or droppedCount == countOfTradableItemsByLink
                 )
                 and selfAwardedItemCountByLink[BagItem.itemLink] > 0

@@ -685,7 +685,7 @@ function TimeLeft:refreshBars(byRefresh)
         -- This condition check is used to determine if an item that has been SelfAwarded should be displayed or not
         --  based on the number of same tradable items in the players bags
         -- x : numOfTradableItem == droppedCount - (tradedCount - selfAwardedCount)
-        -- y : droppedCount = numOfTradableItem
+        -- y : droppedCount == numOfTradableItem
         -- z : selfAwardedCount > 0
         -- i : timeRemaining > 600
         --

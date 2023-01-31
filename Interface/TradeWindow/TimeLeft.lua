@@ -671,7 +671,6 @@ function TimeLeft:refreshBars(byRefresh)
             break;
         end
 
-        local itemCount = GetItemCount(BagItem.itemLink)
         local countOfTradableItemsByLink = 0
         for _, value in pairs(ItemsWithTradeTimeRemaining) do
             if(BagItem.itemLink == value.itemLink) then
@@ -696,8 +695,7 @@ function TimeLeft:refreshBars(byRefresh)
         -- else
         --  add TimerBar
         if (
-                (itemCount >= countOfTradableItemsByLink
-                    and countOfTradableItemsByLink == droppedCount-(tradedCountByLink[BagItem.itemLink]-selfAwardedItemCountByLink[BagItem.itemLink])
+                (countOfTradableItemsByLink == droppedCount-(tradedCountByLink[BagItem.itemLink]-selfAwardedItemCountByLink[BagItem.itemLink])
                     or droppedCount == countOfTradableItemsByLink
                 )
                 and selfAwardedItemCountByLink[BagItem.itemLink] > 0
